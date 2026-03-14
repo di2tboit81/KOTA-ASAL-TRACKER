@@ -2,86 +2,61 @@ const express = require("express");
 const fileUpload = require("express-fileupload");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 
 const app = express();
-
 app.use(express.static("public"));
 app.use(fileUpload());
 
 let clients = [];
 
-app.get("/logs",(req,res)=>{
-
-res.set({
-"Content-Type":"text/event-stream",
-"Cache-Control":"no-cache",
-"Connection":"keep-alive"
+app.get("/logs", (req, res) => {
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive"
+  });
+  res.flushHeaders();
+  clients.push(res);
 });
 
-res.flushHeaders();
-
-clients.push(res);
-
-});
-
-function sendLog(msg){
-clients.forEach(c=>c.write(`data: ${msg}\n\n`));
+function sendLog(msg) {
+  clients.forEach(c => c.write(`data: ${msg}\n\n`));
 }
 
-app.post("/upload",(req,res)=>{
+app.post("/upload", (req, res) => {
+  if (!req.files) return res.send("no file");
+  const file = req.files.file;
+  const uploadPath = path.join(__dirname, "resi.xlsx");
 
-if(!req.files){
-return res.send("no file");
-}
-
-const file=req.files.file;
-
-file.mv("resi.xlsx",(err)=>{
-
-if(err){
-return res.send("upload gagal");
-}
-
-sendLog("File resi.xlsx berhasil upload");
-
-res.send("ok");
-
+  file.mv(uploadPath, err => {
+    if (err) return res.send("upload gagal");
+    sendLog("File resi.xlsx berhasil upload");
+    res.send("ok");
+  });
 });
 
+app.get("/run", (req, res) => {
+  sendLog("Memulai tracking...");
+  const proc = spawn("node", [path.join(__dirname, "tracking.js")]);
+
+  proc.stdout.on("data", data => sendLog(data.toString()));
+  proc.stderr.on("data", data => sendLog("ERROR: " + data.toString()));
+  proc.on("close", code => sendLog("Tracking selesai"));
+
+  res.send("started");
 });
 
-app.get("/run",(req,res)=>{
-
-sendLog("Memulai tracking...");
-
-const proc = spawn("node",["tracking.js"]);
-
-proc.stdout.on("data",(data)=>{
-sendLog(data.toString());
+app.get("/download", (req, res) => {
+  const hasilPath = path.join(__dirname, "hasil_spx.xlsx");
+  if (fs.existsSync(hasilPath)) {
+    res.download(hasilPath);
+  } else {
+    res.send("file hasil belum ada");
+  }
 });
 
-proc.stderr.on("data",(data)=>{
-sendLog("ERROR: "+data.toString());
-});
-
-proc.on("close",(code)=>{
-sendLog("Tracking selesai");
-});
-
-res.send("started");
-
-});
-
-app.get("/download",(req,res)=>{
-
-if(fs.existsSync("hasil_spx.xlsx")){
-res.download("hasil_spx.xlsx");
-}else{
-res.send("file hasil belum ada");
-}
-
-});
-
-app.listen(3000,()=>{
-console.log("Server jalan di http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server jalan di http://localhost:${PORT}`);
 });
