@@ -5,8 +5,15 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
+
+// Serve static files
 app.use(express.static("public"));
 app.use(fileUpload());
+
+// Route / untuk index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 let clients = [];
 
@@ -25,7 +32,8 @@ function sendLog(msg) {
 }
 
 app.post("/upload", (req, res) => {
-  if (!req.files) return res.send("no file");
+  if (!req.files || !req.files.file) return res.send("no file");
+
   const file = req.files.file;
   const uploadPath = path.join(__dirname, "resi.xlsx");
 
@@ -38,6 +46,7 @@ app.post("/upload", (req, res) => {
 
 app.get("/run", (req, res) => {
   sendLog("Memulai tracking...");
+
   const proc = spawn("node", [path.join(__dirname, "tracking.js")]);
 
   proc.stdout.on("data", data => sendLog(data.toString()));
@@ -57,12 +66,4 @@ app.get("/download", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server jalan di http://localhost:${PORT}`);
-});
-
-const path = require("path");
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+app.listen(PORT, () => console.log(`Server jalan di http://localhost:${PORT}`));
