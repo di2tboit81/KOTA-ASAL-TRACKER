@@ -64,6 +64,7 @@ async function run() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Hasil");
   XLSX.writeFile(wb, path.join(__dirname, "hasil_spx.xlsx"));
+
   console.log("✅ Selesai! File hasil_spx.xlsx berhasil dibuat.");
 }
 
