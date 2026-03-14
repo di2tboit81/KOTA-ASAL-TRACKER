@@ -16,10 +16,11 @@ async function run() {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-  });
+ const browser = await puppeteer.launch({
+  headless: true,
+  args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"],
+  executablePath: process.env.CHROMIUM_PATH || undefined
+});
   const page = await browser.newPage();
 
   let hasil = [];
